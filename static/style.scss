@@ -1,0 +1,44 @@
+.posts [component="post"].isSolved {
+	&:before {
+		content: attr(data-label);
+		background: $success;
+		border-radius: 0 4px 4px 0;
+		color: $form-label-color;
+		text-transform: uppercase;
+		font-size: 10px;
+		padding: 4px 8px;
+		font-weight: 600;
+		position: relative;
+		top: -1.25rem;
+		color: white;
+	}
+
+	border-left: 8px solid $success;
+	border-right: 1px solid $success;
+	border-top: 1px solid $success;
+	border-bottom: 1px solid $success;
+
+	padding-top: 40px;	// to make room for label (in :before pseudo-element)
+
+	.necro-post {
+		display: none;
+	}
+
+	@include media-breakpoint-down(sm) {
+		margin-left: -15px;
+	}
+
+	> hr {
+		display: none;
+	}
+}
+
+[component="topic"].solved {
+	[data-necro-post-index="0"] {
+		display: none!important;
+	}
+}
+
+.posts.timeline > [component="post"].isSolved {
+	margin-left: calc(2.5rem - 3.5px);
+}

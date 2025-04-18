@@ -1,0 +1,20 @@
+{
+  "id": "nodebb-plugin-anonymous",
+  "name": "Anonymous Posting Plugin for NodeBB",
+  "description": "A plugin for NodeBB which allows users to post anonymously",
+  "url": "https://github.com/NodeBB/nodebb-plugin-anonymous",
+  "library": "./library.js",
+  "hooks": [
+    { "hook": "static:app.load", "method": "init" },
+    { "hook": "filter:topic.create", "method": "filterTopicCreate" },
+    { "hook": "action:topic.save", "method": "actionTopicSave" },
+    { "hook": "filter:topic.get", "method": "filterTopicGet" },
+    { "hook": "filter:post.create", "method": "filterPostCreate" },
+    { "hook": "action:post.save", "method": "actionPostSave" },
+    { "hook": "filter:post.get", "method": "filterPostGet" },
+    { "hook": "filter:composer.build", "method": "filterComposerBuild" }
+  ],
+  "scripts": ["static/lib/main.js"],
+  "templates": "static/templates",
+  "languages": "static/languages"
+}

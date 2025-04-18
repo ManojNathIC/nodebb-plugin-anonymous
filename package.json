@@ -1,0 +1,37 @@
+{
+  "name": "nodebb-plugin-anonymous",
+  "version": "1.2.8",
+  "description": "A nodebb-plugin-anonymous plugin for NodeBB which allows users to post topics as questions and select a post as the answer",
+  "main": "library.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/psychobunny/nodebb-plugin-anonymous"
+  },
+  "keywords": [
+    "nodebb",
+    "plugin",
+    "question",
+    "answer",
+    "Q&A"
+  ],
+  "author": {
+    "name": "psychobunny",
+    "email": "psycho.bunny@hotmail.com"
+  },
+  "license": "BSD-2-Clause",
+  "bugs": {
+    "url": "https://github.com/psychobunny/nodebb-plugin-anonymous/issues"
+  },
+  "readmeFilename": "README.md",
+  "nbbpm": {
+    "compatibility": "^3.6.3"
+  },
+  "scripts": {
+    "lint": "eslint ."
+  },
+  "devDependencies": {
+    "eslint": "^7.32.0",
+    "eslint-config-nodebb": "^0.0.2",
+    "eslint-plugin-import": "^2.24.2"
+  }
+}
