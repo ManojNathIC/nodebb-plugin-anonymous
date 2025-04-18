@@ -2,7 +2,7 @@
   "id": "nodebb-plugin-anonymous",
   "name": "Anonymous Posting Plugin for NodeBB",
   "description": "A plugin for NodeBB which allows users to post anonymously",
-  "url": "https://github.com/NodeBB/nodebb-plugin-anonymous",
+  "url": "https://github.com/ManojNathIC/nodebb-plugin-anonymous",
   "library": "./library.js",
   "hooks": [
     { "hook": "static:app.load", "method": "init" },
