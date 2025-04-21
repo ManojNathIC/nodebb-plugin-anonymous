@@ -1,6 +1,6 @@
 {
   "name": "nodebb-plugin-anonymous",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A nodebb-plugin-anonymous plugin for NodeBB which allows users to post topics as questions and select a post as the answer",
   "main": "library.js",
   "repository": {
@@ -17,7 +17,7 @@
   "author": {
     "name": "ManojNathIC"
   },
-  "license": "BSD-2-Clause",
+  "license": "MIT",
   "bugs": {
     "url": "https://github.com/ManojNathIC/nodebb-plugin-anonymous/issues"
   },
