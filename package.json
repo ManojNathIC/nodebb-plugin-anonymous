@@ -17,9 +17,9 @@
   "author": {
     "name": "ManojNathIC"
   },
-  "license": "BSD-2-Clause",
+  "license": "MIT",
   "bugs": {
-    "url": "https://github.com/ManojNathIC/nodebb-plugin-anonymous"
+    "url": "https://github.com/ManojNathIC/nodebb-plugin-anonymous/issues"
   },
   "readmeFilename": "README.md",
   "nbbpm": {
