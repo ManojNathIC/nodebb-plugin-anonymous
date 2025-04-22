@@ -9,7 +9,10 @@
     { "hook": "filter:topic.create", "method": "filterTopicCreate" },
     { "hook": "action:topic.save", "method": "actionTopicSave" },
     { "hook": "filter:topic.get", "method": "filterTopicGet" },
+    { "hook": "filter:topic.create.v3", "method": "filterTopicCreateV3" },
+    { "hook": "filter:topic.get.v3", "method": "filterTopicGetV3" },
     { "hook": "filter:post.create", "method": "filterPostCreate" },
+    { "hook": "filter:post.create.v3", "method": "filterPostCreateV3" },
     { "hook": "action:post.save", "method": "actionPostSave" },
     { "hook": "filter:post.get", "method": "filterPostGet" },
     { "hook": "filter:composer.build", "method": "filterComposerBuild" }
