@@ -15,7 +15,10 @@
     { "hook": "filter:post.create.v3", "method": "filterPostCreateV3" },
     { "hook": "action:post.save", "method": "actionPostSave" },
     { "hook": "filter:post.get", "method": "filterPostGet" },
-    { "hook": "filter:composer.build", "method": "filterComposerBuild" }
+    { "hook": "filter:composer.build", "method": "filterComposerBuild" },
+    { "hook": "filter:topics.getPostReplies", "method": "filterRepliesGet" },
+    { "hook": "filter:topics.getPosts", "method": "filterPostsGet" },
+    { "hook": "filter:posts.getReplies", "method": "filterRepliesGetV3" }
   ],
   "scripts": ["static/lib/main.js"],
   "templates": "static/templates",
