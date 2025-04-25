@@ -4,6 +4,13 @@
   "description": "A plugin for NodeBB which allows users to post anonymously",
   "url": "https://github.com/ManojNathIC/nodebb-plugin-anonymous",
   "library": "./library.js",
+  "routes": [
+    {
+      "method": "get",
+      "route": "/api/v3/posts/:pid/replies",
+      "handler": "filterRepliesGet"
+    }
+  ],
   "hooks": [
     { "hook": "static:app.load", "method": "init" },
     { "hook": "filter:topic.create", "method": "filterTopicCreate" },
@@ -16,8 +23,7 @@
     { "hook": "action:post.save", "method": "actionPostSave" },
     { "hook": "filter:post.get", "method": "filterPostGet" },
     { "hook": "filter:composer.build", "method": "filterComposerBuild" },
-    { "hook": "filter:topics.getPostReplies", "method": "filterRepliesGet" },
-    { "hook": "filter:topics.getPosts", "method": "filterPostsGet" },
+    { "hook": "filter:api.posts.getReplies", "method": "filterPostsGet" },
     { "hook": "filter:posts.getReplies", "method": "filterRepliesGetV3" }
   ],
   "scripts": ["static/lib/main.js"],

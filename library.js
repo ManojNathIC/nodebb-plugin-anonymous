@@ -12,6 +12,129 @@ const plugin = module.exports;
 plugin.init = async function (params) {
   console.log("[Anonymous Posting] Initializing plugin with params:", params);
   const { router } = params;
+
+  console.log(
+    "[Anonymous Posting] Registering route /api/v3/posts/:pid/replies"
+  );
+  router.get("/api/v3/posts/:pid/replies", async (req, res, next) => {
+    console.log("[Anonymous Posting] Replies endpoint hit with pid:", req);
+
+    // Store the original json method
+    const originalJson = res.json;
+
+    // Override the json method to modify the response
+    res.json = async function (data) {
+      console.log(
+        "[Anonymous Posting] Original response data:",
+        data.response.replies
+      );
+
+      if (Array.isArray(data.response.replies)) {
+        // Process each reply
+        for (const reply of data.response.replies) {
+          // Get post data from database
+          const postData = await db.getObject(`post:${reply.pid}`);
+          console.log("[Anonymous Posting] Post data from DB:", postData);
+
+          // Check if post is anonymous
+          const isAnonymous =
+            postData?.anonymous === true || postData?.anonymous === "true";
+          console.log("[Anonymous Posting] Is reply anonymous:", isAnonymous);
+          // Check if user is admin
+          const isAdmin = await user.isAdministrator(req.uid);
+          console.log("[Anonymous Posting] Is admin:", isAdmin);
+          // Check if toPid exists and get its anonymous status
+          let isParentAnonymous = false;
+          if (reply.toPid) {
+            // Check if post has parent data and is anonymous
+
+            const parentPost = await db.getObject(`post:${reply.toPid}`);
+            console.log("parentPost", parentPost);
+            if (
+              parentPost.anonymous === "true" ||
+              parentPost.anonymous === true
+            ) {
+              isParentAnonymous = true;
+            }
+          }
+          if (!isAdmin) {
+            if ((reply?.parent && isAnonymous) || isParentAnonymous) {
+              console.log("isParentAnonymous", isParentAnonymous);
+
+              reply.toPid = "0";
+              const result = anonymizeMentions(reply.content);
+              console.log("result", result);
+              reply.content = result;
+
+              reply.parent = {
+                username: "Anonymous",
+                displayname: "Anonymous",
+              };
+            }
+          }
+          if (isAnonymous) {
+            if (!isAdmin) {
+              // For non-admins, anonymize the reply
+              reply.user = {
+                username: "Anonymous",
+                userslug: "anonymous",
+                picture: "",
+                uid: 0,
+                displayname: "Anonymous",
+                fullname: "Anonymous",
+                "icon:bgColor": "#666666",
+                "icon:text": "A",
+              };
+              for (const item of reply.replies.users) {
+                item.username = "Anonymous";
+                item.userslug = "anonymous";
+                item.picture = "";
+                item.uid = 0;
+                item.displayname = "Anonymous";
+                item.fullname = "Anonymous";
+                item["icon:bgColor"] = "#666666";
+                item["icon:text"] = "A";
+              }
+
+              reply.anonymous = true;
+            } else {
+              // For admins, show real user but mark as anonymous
+              const realUid = postData.anonymousUserId;
+              if (realUid) {
+                const userData = await user.getUserFields(realUid, [
+                  "username",
+                  "userslug",
+                  "picture",
+                  "displayname",
+                  "fullname",
+                ]);
+                reply.user = {
+                  username: userData.username,
+                  userslug: userData.userslug,
+                  picture: userData.picture,
+                  uid: realUid,
+                  displayname: userData.displayname || userData.username,
+                  fullname: userData.fullname || userData.username,
+                };
+              }
+              reply.anonymous = true;
+            }
+          }
+          reply.uid = 0;
+        }
+      }
+
+      console.log(
+        "[Anonymous Posting] Modified response data:",
+        data.response.replies
+      );
+      // Call the original json method with modified data
+      originalJson.call(this, data);
+    };
+
+    next();
+  });
+
   plugins.hooks.register("filter:api.response", plugin.filterApiResponse);
   // Add socket handler for anonymous posting
   SocketPlugins.anonymous = {
@@ -880,9 +1003,20 @@ plugin.filterRepliesGetV3 = async function (hookData) {
 };
 
 plugin.filterApiResponse = async function (hookData) {
+  console.log(
+    "[Anonymous Posting] filterApiResponse called with path:",
+    hookData.path
+  );
+
   if (hookData.path === "/api/v3/posts/:pid/replies") {
+    console.log("[Anonymous Posting] Processing replies endpoint response");
     // This will be called after filterRepliesGetV3
     if (hookData.response && Array.isArray(hookData.response)) {
+      console.log(
+        "[Anonymous Posting] Processing",
+        hookData.response.length,
+        "replies"
+      );
       // Process each reply in the response
       for (const reply of hookData.response) {
         if (reply.anonymous) {
