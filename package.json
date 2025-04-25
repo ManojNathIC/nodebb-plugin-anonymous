@@ -1,7 +1,7 @@
 {
   "name": "nodebb-plugin-anonymous",
   "version": "1.0.4",
-  "description": "A nodebb-plugin-anonymous plugin for NodeBB which allows users to post topics as questions and select a post as the answer",
+  "description": "A plugin for NodeBB which allows users to post anonymously",
   "main": "library.js",
   "repository": {
     "type": "git",
