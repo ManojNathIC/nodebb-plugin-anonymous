@@ -3,6 +3,8 @@
 [![NodeBB](https://img.shields.io/badge/NodeBB-v3.x-blue)](https://nodebb.org)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
+> **Note:** 🛠️ This plugin is currently under development. Features and functionality may change, and it is not recommended for use in production environments at this time.
+
 ## Overview
 
 The **Anonymous Posting Plugin** for NodeBB allows logged-in users to post anonymously in topics and replies. This plugin ensures that the identity of the user is hidden while still allowing moderation and administrative actions.
