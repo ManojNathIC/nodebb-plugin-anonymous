@@ -7,7 +7,7 @@ $(document).ready(function () {
       '.composer[data-uuid="' + data.post_uuid + '"] .action-bar'
     );
     const anonymousCheckbox = $(
-      '<label class="checkbox" style="margin-right: 10px;"><input type="checkbox" id="anonymous-post"> Post Anonymously</label>'
+      '<label class="checkbox" style="margin-right: 10px;margin-top: 5px;"><input type="checkbox" id="anonymous-post" style="margin-right: 0.2rem;"> <span style="color: #333333;font-size: 15px;">Post Anonymously</span></label>'
     );
     actionBar.find(".composer-submit").before(anonymousCheckbox);
 
