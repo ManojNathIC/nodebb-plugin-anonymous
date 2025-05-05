@@ -453,8 +453,8 @@ plugin.filterComposerBuild = async function (hookData) {
 // Add new filter to handle topic data
 plugin.filterTopicGet = async function (hookData) {
   console.log(
-    "[Anonymous Posting] Filter topic get called with topic:",
-    hookData.topic
+    "[Anonymous Posting] Filter topic get called with topic:"
+    // hookData.topic
   );
   if (!hookData.topic) {
     console.log("hookData.topic", hookData.topic);
@@ -482,6 +482,11 @@ plugin.filterTopicGet = async function (hookData) {
     console.log("[Anonymous Posting] Processing anonymous topic for non-admin");
     // For non-admins, anonymize the author information
     if (!isTopicAuthor && isAnonymous) {
+      console.log(
+        "[Anonymous Posting] Setting anonymous user data for topic",
+        hookData.author
+      );
+
       hookData.topic.author = {
         username: "Anonymous",
         userslug: "anonymous",
@@ -517,6 +522,7 @@ plugin.filterTopicGet = async function (hookData) {
             "[Anonymous Posting] Is post anonymous:",
             postIsAnonymous
           );
+
           if (!isAdmin && !isPostAuthor && postIsAnonymous) {
             console.log("isAdmin", isAdmin);
             console.log("isPostAuthor", isPostAuthor);
@@ -535,6 +541,51 @@ plugin.filterTopicGet = async function (hookData) {
               "icon:bgColor": "#666666",
               "icon:text": "A",
             };
+          }
+
+          if (!isAdmin && !isTopicAuthor && isAnonymous && postIsAnonymous) {
+            const result = anonymizeMentions(post.content);
+            console.log("result", result);
+            post.content = result;
+            post.user = {
+              username: "Anonymous",
+              userslug: "anonymous",
+              picture: "",
+              uid: 0,
+              displayname: "Anonymous",
+              fullname: "Anonymous",
+              "icon:bgColor": "#666666",
+              "icon:text": "A",
+            };
+
+            console.log(
+              "[Anonymous Posting] Setting anonymous user data for topic--->",
+              hookData.topic.author
+            );
+            hookData.topic.author = {
+              username: "Anonymous",
+              userslug: "anonymous",
+              uid: 0,
+              displayname: "Anonymous",
+              picture: "",
+              "icon:bgColor": "#666666",
+              "icon:text": "A",
+            };
+            if (post.events && post.events.length > 0) {
+              for (const event of post.events) {
+                event.user = {
+                  username: "Anonymous",
+                  userslug: "anonymous",
+                  uid: 0,
+                  displayname: "Anonymous",
+                  picture: "",
+                  "icon:bgColor": "#666666",
+                  "icon:text": "A",
+                };
+                const result = anonymizeMentions(event.text);
+                event.text = result;
+              }
+            }
           }
           // Check if toPid exists and get its anonymous status
           let isParentAnonymous = false;
@@ -575,10 +626,25 @@ plugin.filterTopicGet = async function (hookData) {
 };
 // anonymizeMentions function
 function anonymizeMentions(content) {
-  return content.replace(
-    /<a([^>]*?)href="[^"]*\/uid\/\d+"([^>]*?)>[^<]+<\/a>/g,
-    '<a$1href="/uid/0"$2>anonymous</a>'
+  // Replace user profile links like /user/username
+  content = content.replace(
+    /<a[^>]*href="\/user\/[^"]+"[^>]*>[^<]+<\/a>/g,
+    '<a href="/uid/0">anonymous</a>'
   );
+
+  // Replace mentions like @username with anonymous
+  content = content.replace(
+    /<a[^>]*href="[^"]*\/uid\/\d+"[^>]*>@[^<]+<\/a>/g,
+    '<a href="/uid/0">anonymous</a>'
+  );
+
+  // Remove avatars (optional)
+  content = content.replace(
+    /<span[^>]*class="[^"]*avatar[^"]*"[^>]*>.*?<\/span>/g,
+    ""
+  );
+
+  return content;
 }
 
 // Add new hook to handle API v3 topic creation
