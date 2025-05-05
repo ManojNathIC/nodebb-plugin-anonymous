@@ -626,19 +626,19 @@ plugin.filterTopicGet = async function (hookData) {
 };
 // anonymizeMentions function
 function anonymizeMentions(content) {
-  // Replace user profile links like /user/username
+  // Match any path that ends in /user/username
   content = content.replace(
-    /<a[^>]*href="\/user\/[^"]+"[^>]*>[^<]+<\/a>/g,
+    /<a[^>]*href="[^"]*\/user\/[^"]+"[^>]*>[^<]+<\/a>/g,
     '<a href="/uid/0">anonymous</a>'
   );
 
-  // Replace mentions like @username with anonymous
+  // Match @username format like /uid/123
   content = content.replace(
     /<a[^>]*href="[^"]*\/uid\/\d+"[^>]*>@[^<]+<\/a>/g,
     '<a href="/uid/0">anonymous</a>'
   );
 
-  // Remove avatars (optional)
+  // Remove avatar spans (optional)
   content = content.replace(
     /<span[^>]*class="[^"]*avatar[^"]*"[^>]*>.*?<\/span>/g,
     ""
