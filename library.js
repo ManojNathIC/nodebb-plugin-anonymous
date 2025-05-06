@@ -451,200 +451,109 @@ plugin.filterComposerBuild = async function (hookData) {
 };
 
 // Add new filter to handle topic data
-plugin.filterTopicGet = async function (hookData) {
-  console.log(
-    "[Anonymous Posting] Filter topic get called with topic:"
-    // hookData.topic
-  );
-  if (!hookData.topic) {
-    console.log("hookData.topic", hookData.topic);
+// Reusable anonymous user object
+const anonymousUser = {
+  username: "Anonymous",
+  userslug: "anonymous",
+  uid: 0,
+  displayname: "Anonymous",
+  picture: "",
+  "icon:bgColor": "#666666",
+  "icon:text": "A",
+};
 
-    return hookData;
+plugin.filterTopicGet = async function (hookData) {
+  if (!hookData.topic) return hookData;
+
+  const { uid, topic } = hookData;
+  const isAdmin = await user.isAdministrator(uid);
+  const isTopicAuthor = topic.uid === uid;
+  const isTopicAnonymous =
+    topic.anonymous === true || topic.anonymous === "true";
+  console.log(
+    "[Anonymous Posting] 1st condition:",
+    !isAdmin && !isTopicAuthor && isTopicAnonymous
+  );
+
+  if (!isAdmin && !isTopicAuthor && isTopicAnonymous) {
+    topic.author = { ...anonymousUser };
   }
 
-  const isAdmin = await user.isAdministrator(hookData.uid);
-  const isTopicAuthor = hookData.topic.uid === hookData.uid;
-  console.log(
-    "[Anonymous Posting] Is admin:",
-    isAdmin,
-    "Is topic author:",
-    isTopicAuthor
-  );
+  if (topic.posts && topic.posts.length) {
+    for (const post of topic.posts) {
+      if (!post.user) continue;
 
-  // Check if topic is anonymous
-  // const isAnonymous = hookData.topic.anonymous;
-  const isAnonymous =
-    hookData.topic &&
-    (hookData.topic.anonymous === true || hookData.topic.anonymous === "true");
-  console.log("[Anonymous Posting] Is topic anonymous:", isAnonymous);
+      const isPostAuthor = post.uid === uid;
+      const isPostAnonymous =
+        post.anonymous === true || post.anonymous === "true";
 
-  if (!isAdmin) {
-    console.log("[Anonymous Posting] Processing anonymous topic for non-admin");
-    // For non-admins, anonymize the author information
-    if (!isTopicAuthor && isAnonymous) {
-      console.log(
-        "[Anonymous Posting] Setting anonymous user data for topic",
-        hookData.author
-      );
+      // Anonymize post author
+      if (!isAdmin && !isPostAuthor && isPostAnonymous) {
+        post.user = { ...anonymousUser };
+      }
 
-      hookData.topic.author = {
-        username: "Anonymous",
-        userslug: "anonymous",
-        uid: 0,
-        displayname: "Anonymous",
-        picture: "",
-        "icon:bgColor": "#666666",
-        "icon:text": "A",
-      };
-    }
+      // Anonymize mentions and events
+      if (
+        !isAdmin &&
+        !isPostAuthor &&
+        !isTopicAuthor &&
+        isTopicAnonymous &&
+        isPostAnonymous
+      ) {
+        post.content = anonymizeMentions(post.content);
+        post.user = { ...anonymousUser };
+        topic.author = { ...anonymousUser };
 
-    // Also anonymize the user information in posts
-    if (hookData.topic.posts && hookData.topic.posts.length) {
-      console.log("inside if of posts");
+        // Also anonymize events if any
+        if (post.events?.length) {
+          for (const event of post.events) {
+            console.log("----------------------->", event);
 
-      for (const post of hookData.topic.posts) {
-        console.log("inside for of posts");
-
-        if (post.user) {
-          console.log("inside if of post.user");
-
-          const isPostAuthor = post.uid === hookData.uid;
-          console.log(
-            "[Anonymous Posting] Processing post:",
-            post.pid,
-            "Is post author:",
-            isPostAuthor
-          );
-          // Check if post is anonymous
-          const postIsAnonymous =
-            post.anonymous === true || post.anonymous === "true";
-          console.log(
-            "[Anonymous Posting] Is post anonymous:",
-            postIsAnonymous
-          );
-
-          if (!isAdmin && !isPostAuthor && postIsAnonymous) {
-            console.log("isAdmin", isAdmin);
-            console.log("isPostAuthor", isPostAuthor);
-            console.log("isAnonymous", isAnonymous);
-
-            console.log(
-              "[Anonymous Posting] Setting anonymous user data for post"
-            );
-            post.user = {
-              username: "Anonymous",
-              userslug: "anonymous",
-              picture: "",
-              uid: 0,
-              displayname: "Anonymous",
-              fullname: "Anonymous",
-              "icon:bgColor": "#666666",
-              "icon:text": "A",
-            };
-          }
-
-          if (!isAdmin && !isTopicAuthor && isAnonymous && postIsAnonymous) {
-            const result = anonymizeMentions(post.content);
-            console.log("result", result);
-            post.content = result;
-            post.user = {
-              username: "Anonymous",
-              userslug: "anonymous",
-              picture: "",
-              uid: 0,
-              displayname: "Anonymous",
-              fullname: "Anonymous",
-              "icon:bgColor": "#666666",
-              "icon:text": "A",
-            };
-
-            console.log(
-              "[Anonymous Posting] Setting anonymous user data for topic--->",
-              hookData.topic.author
-            );
-            hookData.topic.author = {
-              username: "Anonymous",
-              userslug: "anonymous",
-              uid: 0,
-              displayname: "Anonymous",
-              picture: "",
-              "icon:bgColor": "#666666",
-              "icon:text": "A",
-            };
-            if (post.events && post.events.length > 0) {
-              for (const event of post.events) {
-                event.user = {
-                  username: "Anonymous",
-                  userslug: "anonymous",
-                  uid: 0,
-                  displayname: "Anonymous",
-                  picture: "",
-                  "icon:bgColor": "#666666",
-                  "icon:text": "A",
-                };
-                const result = anonymizeMentions(event.text);
-                event.text = result;
-              }
-            }
-          }
-          // Check if toPid exists and get its anonymous status
-          let isParentAnonymous = false;
-          if (post.toPid) {
-            // Check if post has parent data and is anonymous
-
-            const parentPost = await db.getObject(`post:${post.toPid}`);
-            console.log("parentPost", parentPost);
-            if (
-              parentPost.anonymous === "true" ||
-              parentPost.anonymous === true
-            ) {
-              isParentAnonymous = true;
-            }
-          }
-          if (
-            (post?.parent && postIsAnonymous) ||
-            (isParentAnonymous && !isAdmin && !isPostAuthor)
-          ) {
-            console.log("isParentAnonymous", isParentAnonymous);
-
-            post.toPid = "0";
-            const result = anonymizeMentions(post.content);
-            console.log("result", result);
-            post.content = result;
-
-            post.parent = {
-              username: "Anonymous",
-              displayname: "Anonymous",
-            };
+            event.user = { ...anonymousUser };
+            event.text = anonymizeMentions(event.text);
           }
         }
       }
+
+      // Handle parent post
+      let isParentAnonymous = false;
+      if (post.toPid) {
+        const parentPost = await db.getObject(`post:${post.toPid}`);
+        isParentAnonymous =
+          parentPost?.anonymous === true || parentPost?.anonymous === "true";
+      }
+
+      if (
+        (post.parent && isPostAnonymous) ||
+        (isParentAnonymous && !isAdmin && !isPostAuthor)
+      ) {
+        post.toPid = "0";
+        post.content = anonymizeMentions(post.content);
+        post.parent = {
+          username: "Anonymous",
+          displayname: "Anonymous",
+        };
+      }
     }
+  }
+  if (!isAdmin && !isTopicAuthor && isTopicAnonymous) {
+    topic.author = { ...anonymousUser };
   }
 
   return hookData;
 };
-// anonymizeMentions function
+
 function anonymizeMentions(content) {
-  // Match any path that ends in /user/username
-  content = content.replace(
-    /<a[^>]*href="[^"]*\/user\/[^"]+"[^>]*>[^<]+<\/a>/g,
-    '<a href="/uid/0">anonymous</a>'
-  );
-
-  // Match @username format like /uid/123
-  content = content.replace(
-    /<a[^>]*href="[^"]*\/uid\/\d+"[^>]*>@[^<]+<\/a>/g,
-    '<a href="/uid/0">anonymous</a>'
-  );
-
-  // Remove avatar spans (optional)
-  content = content.replace(
-    /<span[^>]*class="[^"]*avatar[^"]*"[^>]*>.*?<\/span>/g,
-    ""
-  );
-
-  return content;
+  return content
+    .replace(
+      /<a[^>]*href="[^"]*\/user\/[^"]+"[^>]*>[^<]+<\/a>/g,
+      '<a href="/uid/0">anonymous</a>'
+    )
+    .replace(
+      /<a[^>]*href="[^"]*\/uid\/\d+"[^>]*>@[^<]+<\/a>/g,
+      '<a href="/uid/0">anonymous</a>'
+    )
+    .replace(/<span[^>]*class="[^"]*avatar[^"]*"[^>]*>.*?<\/span>/g, "");
 }
 
 // Add new hook to handle API v3 topic creation
