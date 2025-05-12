@@ -476,22 +476,19 @@ plugin.filterTopicGet = async function (hookData) {
   );
 
   if (!isAdmin && !isTopicAuthor && isTopicAnonymous) {
+    topic.uid = 0;
     topic.author = { ...anonymousUser };
   }
 
   if (topic.posts && topic.posts.length) {
     for (const post of topic.posts) {
-      if (!post.user) continue;
-
       const isPostAuthor = post.uid === uid;
       const isPostAnonymous =
         post.anonymous === true || post.anonymous === "true";
-
-      // Anonymize post author
       if (!isAdmin && !isPostAuthor && isPostAnonymous) {
+        post.uid = 0;
         post.user = { ...anonymousUser };
       }
-
       // Anonymize mentions and events
       if (
         !isAdmin &&
