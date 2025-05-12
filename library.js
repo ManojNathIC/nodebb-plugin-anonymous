@@ -182,6 +182,51 @@ plugin.init = async function (params) {
     next();
   });
 
+  // Wildcard GET route to catch /discussion-forum/api
+  router.get("*", async (req, res, next) => {
+    if (req.originalUrl === "/discussion-forum/api") {
+      console.log("[Anonymous Posting] /discussion-forum/api endpoint hit");
+      const originalJson = res.json;
+      res.json = async function (data) {
+        console.log(
+          "[Anonymous Posting] Original /discussion-forum/api response data:",
+          JSON.stringify(data, null, 2)
+        );
+        let topicsArr = [];
+        if (Array.isArray(data)) {
+          topicsArr = data;
+        } else if (data && Array.isArray(data.topics)) {
+          topicsArr = data.topics;
+        }
+        if (topicsArr.length) {
+          const isAdmin = await user.isAdministrator(req.uid);
+          for (const topic of topicsArr) {
+            const isTopicAuthor = topic.uid === req.uid;
+            const isTopicAnonymous =
+              topic.anonymous === true || topic.anonymous === "true";
+            if (!isAdmin && !isTopicAuthor && isTopicAnonymous) {
+              topic.uid = 0;
+              topic.user = { ...anonymousUser };
+              if (topic.teaser && topic.teaser.user) {
+                const isTeaserAuthor = topic.teaser.uid === req.uid;
+                if (!isAdmin && !isTeaserAuthor) {
+                  topic.teaser.uid = 0;
+                  topic.teaser.user = { ...anonymousUser };
+                }
+              }
+            }
+          }
+        }
+        console.log(
+          "[Anonymous Posting] Modified /discussion-forum/api response data:",
+          data
+        );
+        originalJson.call(this, data);
+      };
+    }
+    next();
+  });
+
   plugins.hooks.register("filter:api.response", plugin.filterApiResponse);
   // Add socket handler for anonymous posting
   SocketPlugins.anonymous = {
@@ -197,6 +242,17 @@ plugin.init = async function (params) {
       return { anonymous: data.anonymous };
     },
   };
+
+  // Catch-all logger for all API requests
+  router.use((req, res, next) => {
+    if (
+      req.originalUrl.startsWith("/api") ||
+      req.originalUrl.startsWith("/discussion-forum/api")
+    ) {
+      console.log("[Anonymous Posting] API request hit:", req.originalUrl);
+    }
+    next();
+  });
 };
 
 // Handle topic creation to prevent Q&A data and set anonymous flag
