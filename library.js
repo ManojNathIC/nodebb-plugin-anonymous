@@ -135,6 +135,53 @@ plugin.init = async function (params) {
     next();
   });
 
+  // New custom API endpoint for /api/popular
+  router.get("/api/popular", async (req, res, next) => {
+    console.log("[Anonymous Posting] /api/popular endpoint hit");
+    // Store the original json method
+    const originalJson = res.json;
+    // Override the json method to modify the response
+    res.json = async function (data) {
+      console.log(
+        "[Anonymous Posting] Original /api/popular response data:",
+        data
+      );
+      // Handle both array and object-with-array responses
+      let topicsArr = [];
+      if (Array.isArray(data)) {
+        topicsArr = data;
+      } else if (data && Array.isArray(data.topics)) {
+        topicsArr = data.topics;
+      }
+      if (topicsArr.length) {
+        const isAdmin = await user.isAdministrator(req.uid);
+        for (const topic of topicsArr) {
+          const isTopicAuthor = topic.uid === req.uid;
+          const isTopicAnonymous =
+            topic.anonymous === true || topic.anonymous === "true";
+          if (!isAdmin && !isTopicAuthor && isTopicAnonymous) {
+            topic.uid = 0;
+            topic.user = { ...anonymousUser };
+            // Anonymize teaser post if it exists
+            if (topic.teaser && topic.teaser.user) {
+              const isTeaserAuthor = topic.teaser.uid === req.uid;
+              if (!isAdmin && !isTeaserAuthor) {
+                topic.teaser.uid = 0;
+                topic.teaser.user = { ...anonymousUser };
+              }
+            }
+          }
+        }
+      }
+      console.log(
+        "[Anonymous Posting] Modified /api/popular response data:",
+        data
+      );
+      originalJson.call(this, data);
+    };
+    next();
+  });
+
   plugins.hooks.register("filter:api.response", plugin.filterApiResponse);
   // Add socket handler for anonymous posting
   SocketPlugins.anonymous = {
