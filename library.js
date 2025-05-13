@@ -184,7 +184,10 @@ plugin.init = async function (params) {
 
   // Wildcard GET route to catch /discussion-forum/api
   router.get("*", async (req, res, next) => {
-    if (req.originalUrl === "/discussion-forum/api") {
+    if (
+      req.originalUrl === "/discussion-forum/api" ||
+      req.originalUrl === "/discussion-forum/api/?page=0"
+    ) {
       console.log("[Anonymous Posting] /discussion-forum/api endpoint hit");
       const originalJson = res.json;
       res.json = async function (data) {
