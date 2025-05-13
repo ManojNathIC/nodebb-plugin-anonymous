@@ -152,6 +152,8 @@ plugin.init = async function (params) {
         topicsArr = data;
       } else if (data && Array.isArray(data.topics)) {
         topicsArr = data.topics;
+      } else {
+        topicsArr = [data];
       }
       if (topicsArr.length) {
         const isAdmin = await user.isAdministrator(req.uid);
@@ -162,13 +164,37 @@ plugin.init = async function (params) {
           if (!isAdmin && !isTopicAuthor && isTopicAnonymous) {
             topic.uid = 0;
             topic.user = { ...anonymousUser };
-            // Anonymize teaser post if it exists
             if (topic.teaser && topic.teaser.user) {
               const isTeaserAuthor = topic.teaser.uid === req.uid;
               if (!isAdmin && !isTeaserAuthor) {
                 topic.teaser.uid = 0;
                 topic.teaser.user = { ...anonymousUser };
               }
+            }
+          } else {
+            // Not anonymous: fetch user details from DB
+            if (topic.uid) {
+              const userData = await user.getUserFields(topic.uid, [
+                "username",
+                "user_id",
+              ]);
+              console.log("userData", userData);
+
+              topic.user = {
+                ...topic.user,
+                user_id: userData.user_id,
+              };
+            }
+            // Teaser user
+            if (topic.teaser && topic.teaser.uid) {
+              const teaserUserData = await user.getUserFields(
+                topic.teaser.uid,
+                ["username", "user_id"]
+              );
+              topic.teaser.user = {
+                ...topic.teaser.user,
+                user_id: teaserUserData.user_id,
+              };
             }
           }
         }
@@ -182,17 +208,13 @@ plugin.init = async function (params) {
     next();
   });
 
-  // Wildcard GET route to catch /discussion-forum/api
+  // Wildcard GET route to catch all requests
   router.get("*", async (req, res, next) => {
-    // if (
-    //   req.originalUrl === "/discussion-forum/api" ||
-    //   req.originalUrl === "/discussion-forum/api/?page=0"
-    // ) {
-    console.log("[Anonymous Posting] /discussion-forum/api endpoint hit");
+    console.log("[Anonymous Posting] endpoint hit");
     const originalJson = res.json;
     res.json = async function (data) {
       console.log(
-        "[Anonymous Posting] Original /discussion-forum/api response data:",
+        "[Anonymous Posting] Original response data:",
         JSON.stringify(data, null, 2)
       );
       let topicsArr = [];
@@ -200,7 +222,10 @@ plugin.init = async function (params) {
         topicsArr = data;
       } else if (data && Array.isArray(data.topics)) {
         topicsArr = data.topics;
+      } else {
+        topicsArr = [data];
       }
+
       if (topicsArr.length) {
         const isAdmin = await user.isAdministrator(req.uid);
         for (const topic of topicsArr) {
@@ -216,6 +241,31 @@ plugin.init = async function (params) {
                 topic.teaser.uid = 0;
                 topic.teaser.user = { ...anonymousUser };
               }
+            }
+          } else {
+            // Not anonymous: fetch user details from DB
+            if (topic.uid) {
+              const userData = await user.getUserFields(topic.uid, [
+                "username",
+                "user_id",
+              ]);
+              console.log("userData", userData);
+
+              topic.user = {
+                ...topic.user,
+                user_id: userData.user_id,
+              };
+            }
+            // Teaser user
+            if (topic.teaser && topic.teaser.uid) {
+              const teaserUserData = await user.getUserFields(
+                topic.teaser.uid,
+                ["username", "user_id"]
+              );
+              topic.teaser.user = {
+                ...topic.teaser.user,
+                user_id: teaserUserData.user_id,
+              };
             }
           }
         }
