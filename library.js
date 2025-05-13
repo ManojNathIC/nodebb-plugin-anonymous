@@ -184,49 +184,49 @@ plugin.init = async function (params) {
 
   // Wildcard GET route to catch /discussion-forum/api
   router.get("*", async (req, res, next) => {
-    if (
-      req.originalUrl === "/discussion-forum/api" ||
-      req.originalUrl === "/discussion-forum/api/?page=0"
-    ) {
-      console.log("[Anonymous Posting] /discussion-forum/api endpoint hit");
-      const originalJson = res.json;
-      res.json = async function (data) {
-        console.log(
-          "[Anonymous Posting] Original /discussion-forum/api response data:",
-          JSON.stringify(data, null, 2)
-        );
-        let topicsArr = [];
-        if (Array.isArray(data)) {
-          topicsArr = data;
-        } else if (data && Array.isArray(data.topics)) {
-          topicsArr = data.topics;
-        }
-        if (topicsArr.length) {
-          const isAdmin = await user.isAdministrator(req.uid);
-          for (const topic of topicsArr) {
-            const isTopicAuthor = topic.uid === req.uid;
-            const isTopicAnonymous =
-              topic.anonymous === true || topic.anonymous === "true";
-            if (!isAdmin && !isTopicAuthor && isTopicAnonymous) {
-              topic.uid = 0;
-              topic.user = { ...anonymousUser };
-              if (topic.teaser && topic.teaser.user) {
-                const isTeaserAuthor = topic.teaser.uid === req.uid;
-                if (!isAdmin && !isTeaserAuthor) {
-                  topic.teaser.uid = 0;
-                  topic.teaser.user = { ...anonymousUser };
-                }
+    // if (
+    //   req.originalUrl === "/discussion-forum/api" ||
+    //   req.originalUrl === "/discussion-forum/api/?page=0"
+    // ) {
+    console.log("[Anonymous Posting] /discussion-forum/api endpoint hit");
+    const originalJson = res.json;
+    res.json = async function (data) {
+      console.log(
+        "[Anonymous Posting] Original /discussion-forum/api response data:",
+        JSON.stringify(data, null, 2)
+      );
+      let topicsArr = [];
+      if (Array.isArray(data)) {
+        topicsArr = data;
+      } else if (data && Array.isArray(data.topics)) {
+        topicsArr = data.topics;
+      }
+      if (topicsArr.length) {
+        const isAdmin = await user.isAdministrator(req.uid);
+        for (const topic of topicsArr) {
+          const isTopicAuthor = topic.uid === req.uid;
+          const isTopicAnonymous =
+            topic.anonymous === true || topic.anonymous === "true";
+          if (!isAdmin && !isTopicAuthor && isTopicAnonymous) {
+            topic.uid = 0;
+            topic.user = { ...anonymousUser };
+            if (topic.teaser && topic.teaser.user) {
+              const isTeaserAuthor = topic.teaser.uid === req.uid;
+              if (!isAdmin && !isTeaserAuthor) {
+                topic.teaser.uid = 0;
+                topic.teaser.user = { ...anonymousUser };
               }
             }
           }
         }
-        console.log(
-          "[Anonymous Posting] Modified /discussion-forum/api response data:",
-          data
-        );
-        originalJson.call(this, data);
-      };
-    }
+      }
+      console.log(
+        "[Anonymous Posting] Modified /discussion-forum/api response data:",
+        data
+      );
+      originalJson.call(this, data);
+    };
+    // }
     next();
   });
 
