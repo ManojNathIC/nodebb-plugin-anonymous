@@ -314,24 +314,40 @@ plugin.filterTopicCreate = async function (hookData) {
     "[Anonymous Posting] Filter topic create called with data:",
     hookData.data
   );
-  // Remove Q&A related fields from topic data
-  delete hookData.data.isQuestion;
-  delete hookData.data.isSolved;
-  delete hookData.data.solvedPid;
-  console.log(
-    "[Anonymous Posting] Topic data after removing Q&A fields:",
-    hookData.data
-  );
+
+  // Check if both anonymous and question data exist
+  const hasQuestionData = hookData.data.isQuestion === true;
+  const isAnonymous =
+    hookData.data.anonymous === true ||
+    (hookData.data.composerData &&
+      hookData.data.composerData.anonymous === true);
+
+  console.log("[Anonymous Posting] Has question data:", hasQuestionData);
+  console.log("[Anonymous Posting] Is anonymous:", isAnonymous);
+
+  // If anonymous but no question data, remove Q&A fields
+  if (isAnonymous && !hasQuestionData) {
+    console.log(
+      "[Anonymous Posting] Removing Q&A fields for anonymous non-question topic"
+    );
+    delete hookData.data.isQuestion;
+    delete hookData.data.isSolved;
+    delete hookData.data.solvedPid;
+  }
 
   // Set anonymous flag if needed
-  if (
-    hookData.data.anonymous ||
-    (hookData.data.composerData && hookData.data.composerData.anonymous)
-  ) {
+  if (isAnonymous) {
     console.log("[Anonymous Posting] Setting anonymous flag for topic");
     hookData.data.anonymous = true;
     // Save anonymous flag directly to database
     await db.setObjectField(`topic:${hookData.topic.tid}`, "anonymous", true);
+  }
+
+  // If it's a question, ensure question data is saved
+  if (hasQuestionData) {
+    console.log("[Anonymous Posting] Saving question data for topic");
+    await db.setObjectField(`topic:${hookData.topic.tid}`, "isQuestion", 1);
+    await db.setObjectField(`topic:${hookData.topic.tid}`, "isSolved", 0);
   }
 
   return hookData;
@@ -344,21 +360,27 @@ plugin.actionTopicSave = async function (hookData) {
     hookData.topic
   );
   if (hookData.topic) {
-    // Remove Q&A related fields from the topic
-    await topics.deleteTopicFields(hookData.topic.tid, [
-      "isQuestion",
-      "isSolved",
-      "solvedPid",
-    ]);
-    console.log(
-      "[Anonymous Posting] Topic after removing Q&A fields:",
-      hookData.topic
-    );
-    // Get the first post of the topic to check anonymous status
+    // Get the first post of the topic to check anonymous and question status
     const mainPid = hookData.topic.mainPid;
     if (mainPid) {
       const postData = await db.getObject(`post:${mainPid}`);
       console.log("[Anonymous Posting] Main post data:", postData);
+
+      // Check if post is a question
+      const isQuestion = postData?.isQuestion === 1;
+      console.log("[Anonymous Posting] Is question:", isQuestion);
+
+      if (isQuestion) {
+        console.log("[Anonymous Posting] Setting question data on topic");
+        // Set question data on topic
+        await db.setObject(`topic:${hookData.topic.tid}`, {
+          isQuestion: 1,
+          isSolved: 0,
+        });
+        hookData.topic.isQuestion = 1;
+        hookData.topic.isSolved = 0;
+      }
+
       if (postData && postData.anonymous) {
         console.log("[Anonymous Posting] Setting anonymous flag on topic");
         // Set anonymous flag on topic
@@ -379,19 +401,32 @@ plugin.filterPostCreate = async function (hookData) {
     "[Anonymous Posting] Filter post create called with data:",
     hookData.data
   );
-  if (
-    hookData.data.anonymous ||
-    (hookData.data.composerData && hookData.data.composerData.anonymous)
-  ) {
+
+  // Check if both anonymous and question data exist
+  const hasQuestionData = hookData.data.isQuestion === true;
+  const isAnonymous =
+    hookData.data.anonymous === true ||
+    (hookData.data.composerData &&
+      hookData.data.composerData.anonymous === true);
+
+  console.log("[Anonymous Posting] Has question data:", hasQuestionData);
+  console.log("[Anonymous Posting] Is anonymous:", isAnonymous);
+
+  if (isAnonymous) {
     console.log("[Anonymous Posting] Processing anonymous post");
     // Store the real user ID in a separate field
     const realUid = hookData.data.uid;
     console.log("[Anonymous Posting] Real user ID:", realUid);
 
-    // Remove any Q&A related data
-    delete hookData.data.isQuestion;
-    delete hookData.data.isSolved;
-    delete hookData.data.solvedPid;
+    // Only remove Q&A data if this is not a question
+    if (!hasQuestionData) {
+      console.log(
+        "[Anonymous Posting] Removing Q&A fields for anonymous non-question post"
+      );
+      delete hookData.data.isQuestion;
+      delete hookData.data.isSolved;
+      delete hookData.data.solvedPid;
+    }
 
     // Set the post data
     hookData.data.anonymousUserId = realUid;
@@ -411,12 +446,20 @@ plugin.filterPostCreate = async function (hookData) {
     const pid = hookData.data.pid;
     if (pid) {
       console.log("[Anonymous Posting] Saving anonymous data for post:", pid);
-      // First remove any existing Q&A data
-      await db.deleteObjectFields(`post:${pid}`, [
-        "isQuestion",
-        "isSolved",
-        "solvedPid",
-      ]);
+
+      // Only remove Q&A data if this is not a question
+      if (!hasQuestionData) {
+        await db.deleteObjectFields(`post:${pid}`, [
+          "isQuestion",
+          "isSolved",
+          "solvedPid",
+        ]);
+      } else {
+        // If it's a question, ensure question data is saved
+        console.log("[Anonymous Posting] Saving question data for post");
+        await db.setObjectField(`post:${pid}`, "isQuestion", 1);
+        await db.setObjectField(`post:${pid}`, "isSolved", 0);
+      }
 
       console.log("[Anonymous Posting] Post data to save:", postData);
 
@@ -431,6 +474,15 @@ plugin.filterPostCreate = async function (hookData) {
     } else {
       // If pid is not available yet, store the data in the hookData for later use
       hookData.data.anonymousData = postData;
+    }
+  } else if (hasQuestionData) {
+    // Handle non-anonymous question posts
+    console.log("[Anonymous Posting] Processing non-anonymous question post");
+    const pid = hookData.data.pid;
+    if (pid) {
+      console.log("[Anonymous Posting] Saving question data for post:", pid);
+      await db.setObjectField(`post:${pid}`, "isQuestion", 1);
+      await db.setObjectField(`post:${pid}`, "isSolved", 0);
     }
   }
   return hookData;
@@ -447,6 +499,25 @@ plugin.actionPostSave = async function (hookData) {
     hookData.post
   );
   if (hookData.post) {
+    // Check if this is a question from the request body
+    const isQuestion = hookData.caller?.req?.body?.isQuestion === true;
+    console.log("[Anonymous Posting] Is question from request:", isQuestion);
+
+    // Immediately save question data if present
+    if (isQuestion) {
+      console.log(
+        "[Anonymous Posting] Saving question data for post:",
+        hookData.post.pid
+      );
+      const questionData = {
+        isQuestion: 1,
+        isSolved: 0,
+      };
+      await db.setObject(`post:${hookData.post.pid}`, questionData);
+      hookData.post.isQuestion = 1;
+      hookData.post.isSolved = 0;
+    }
+
     // Check if we have anonymous data stored in the hook
     if (hookData.caller.req.body.anonymous === true) {
       console.log(
@@ -457,16 +528,17 @@ plugin.actionPostSave = async function (hookData) {
       const pid = hookData.post.pid;
 
       // Save the anonymous data
-      await db.setObject(`post:${pid}`, hookData.caller.req.body);
+      await db.setObject(`post:${pid}`, {
+        ...hookData.caller.req.body,
+        isQuestion: isQuestion ? 1 : undefined,
+        isSolved: isQuestion ? 0 : undefined,
+      });
 
       // Update the post object
       hookData.post.anonymous = true;
       hookData.post.anonymousUserId = hookData.caller.req.body.anonymousUserId;
       hookData.post.displayname = "Anonymous";
       hookData.post.uid = 0;
-
-      // Clean up the stored data
-      // delete hookData.data.anonymousData;
     } else {
       // Get the post data from the database to check if it's anonymous
       const postData = await db.getObject(`post:${hookData.post.pid}`);
