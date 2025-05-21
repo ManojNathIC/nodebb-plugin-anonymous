@@ -268,6 +268,29 @@ plugin.init = async function (params) {
               };
             }
           }
+
+          // Handle posts within topics
+          if (topic.posts && Array.isArray(topic.posts)) {
+            for (const post of topic.posts) {
+              const isPostAuthor = post.uid === req.uid;
+              const isPostAnonymous =
+                post.anonymous === true || post.anonymous === "true";
+
+              if (!isAdmin && !isPostAuthor && isPostAnonymous) {
+                post.uid = 0;
+                post.user = { ...anonymousUser };
+              } else if (post.uid) {
+                const postUserData = await user.getUserFields(post.uid, [
+                  "username",
+                  "user_id",
+                ]);
+                post.user = {
+                  ...post.user,
+                  user_id: postUserData.user_id,
+                };
+              }
+            }
+          }
         }
       }
       console.log(
@@ -276,7 +299,6 @@ plugin.init = async function (params) {
       );
       originalJson.call(this, data);
     };
-    // }
     next();
   });
 
