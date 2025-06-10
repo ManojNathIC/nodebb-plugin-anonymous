@@ -13,6 +13,42 @@ plugin.init = async function (params) {
   console.log("[Anonymous Posting] Initializing plugin with params:", params);
   const { router } = params;
 
+  // Add hook to store designation and location when plugin initializes
+  plugins.hooks.register("action:app.load", async function () {
+    console.log(
+      "[Anonymous Posting] Plugin initialization - storing designation and location"
+    );
+    try {
+      // Get all users
+      const uids = await db.getSortedSetRange("users:joindate", 0, -1);
+
+      for (const uid of uids) {
+        // Get user data
+        const userData = await user.getUserFields(uid, [
+          "username",
+          "designation",
+          "location",
+        ]);
+
+        // If designation or location is not set, set default values
+        if (!userData.designation || !userData.location) {
+          await db.setObjectFields(`user:${uid}`, {
+            designation: userData.designation || "Not Available",
+            location: userData.location || "Not Available",
+          });
+          console.log(
+            `[Anonymous Posting] Set default designation and location for user ${uid}`
+          );
+        }
+      }
+    } catch (err) {
+      console.error(
+        "[Anonymous Posting] Error during plugin initialization:",
+        err
+      );
+    }
+  });
+
   console.log(
     "[Anonymous Posting] Registering route /api/v3/posts/:pid/replies"
   );
@@ -177,23 +213,29 @@ plugin.init = async function (params) {
               const userData = await user.getUserFields(topic.uid, [
                 "username",
                 "user_id",
+                "designation",
+                "location",
               ]);
               console.log("userData", userData);
 
               topic.user = {
                 ...topic.user,
                 user_id: userData.user_id,
+                designation: userData.designation,
+                location: userData.location,
               };
             }
             // Teaser user
             if (topic.teaser && topic.teaser.uid) {
               const teaserUserData = await user.getUserFields(
                 topic.teaser.uid,
-                ["username", "user_id"]
+                ["username", "user_id", "designation", "location"]
               );
               topic.teaser.user = {
                 ...topic.teaser.user,
                 user_id: teaserUserData.user_id,
+                designation: teaserUserData.designation,
+                location: teaserUserData.location,
               };
             }
           }
@@ -248,23 +290,30 @@ plugin.init = async function (params) {
               const userData = await user.getUserFields(topic.uid, [
                 "username",
                 "user_id",
+                "designation",
+                "location",
               ]);
               console.log("userData", userData);
 
               topic.user = {
                 ...topic.user,
                 user_id: userData.user_id,
+                designation: userData.designation,
+                location: userData.location,
               };
             }
+
             // Teaser user
             if (topic.teaser && topic.teaser.uid) {
               const teaserUserData = await user.getUserFields(
                 topic.teaser.uid,
-                ["username", "user_id"]
+                ["username", "user_id", "designation", "location"]
               );
               topic.teaser.user = {
                 ...topic.teaser.user,
                 user_id: teaserUserData.user_id,
+                designation: teaserUserData.designation,
+                location: teaserUserData.location,
               };
             }
           }
@@ -283,10 +332,14 @@ plugin.init = async function (params) {
                 const postUserData = await user.getUserFields(post.uid, [
                   "username",
                   "user_id",
+                  "designation",
+                  "location",
                 ]);
                 post.user = {
                   ...post.user,
                   user_id: postUserData.user_id,
+                  designation: postUserData.designation,
+                  location: postUserData.location,
                 };
               }
             }
@@ -327,6 +380,23 @@ plugin.init = async function (params) {
       console.log("[Anonymous Posting] API request hit:", req.originalUrl);
     }
     next();
+  });
+
+  // Add hook to store designation and location when user logs in
+  plugins.hooks.register("action:user.login", async function (hookData) {
+    const { uid } = hookData;
+
+    if (uid) {
+      console.log(
+        "[Anonymous Posting] Storing designation and location for user:",
+        uid
+      );
+      await db.setObjectFields(`user:${uid}`, {
+        designation: designation,
+        location: location,
+      });
+    }
+    return hookData;
   });
 };
 
