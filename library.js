@@ -869,20 +869,31 @@ plugin.filterTopicGet = async function (hookData) {
 };
 
 function anonymizeMentions(content) {
-  return content
-    .replace(
-      /<a[^>]*href="[^"]*\/user\/[^"]+"[^>]*>[^<]+<\/a>/g,
-      '<a href="/uid/0">anonymous</a>'
-    )
-    .replace(
-      /<a[^>]*href="[^"]*\/uid\/\d+"[^>]*>@[^<]+<\/a>/g,
-      '<a href="/uid/0">anonymous</a>'
-    )
-    .replace(
-      /<a[^>]*href="[^"]*\/discussion-forum\/user\/[^"]+"[^>]*>[^<]+<\/a>/g,
-      '<a href="/uid/0">anonymous</a>'
-    )
-    .replace(/<span[^>]*class="[^"]*avatar[^"]*"[^>]*>.*?<\/span>/g, "");
+  return (
+    content
+      .replace(
+        /<a[^>]*href="[^"]*\/user\/[^"]+"[^>]*>[^<]+<\/a>/g,
+        '<a href="/uid/0">anonymous</a>'
+      )
+      .replace(
+        /<a[^>]*href="[^"]*\/uid\/\d+"[^>]*>@[^<]+<\/a>/g,
+        '<a href="/uid/0">anonymous</a>'
+      )
+      .replace(
+        /<a[^>]*href="[^"]*\/discussion-forum\/user\/[^"]+"[^>]*>[^<]+<\/a>/g,
+        '<a href="/uid/0">anonymous</a>'
+      )
+      .replace(/<span[^>]*class="[^"]*avatar[^"]*"[^>]*>.*?<\/span>/g, "")
+      // Remove href from links that already contain "anonymous" or point to "/uid/0"
+      .replace(
+        /<a[^>]*href="[^"]*\/uid\/0"[^>]*>anonymous<\/a>/g,
+        '<a href="">anonymous</a>'
+      )
+      .replace(
+        /<a[^>]*href="[^"]*"[^>]*>anonymous<\/a>/g,
+        '<a href="">anonymous</a>'
+      )
+  );
 }
 
 // Add new hook to handle API v3 topic creation
