@@ -215,6 +215,7 @@ plugin.init = async function (params) {
                 "user_id",
                 "designation",
                 "location",
+                "fullname",
               ]);
               console.log("userData", userData);
 
@@ -223,19 +224,21 @@ plugin.init = async function (params) {
                 user_id: userData.user_id,
                 designation: userData.designation,
                 location: userData.location,
+                fullname: userData.fullname,
               };
             }
             // Teaser user
             if (topic.teaser && topic.teaser.uid) {
               const teaserUserData = await user.getUserFields(
                 topic.teaser.uid,
-                ["username", "user_id", "designation", "location"]
+                ["username", "user_id", "designation", "location", "fullname"]
               );
               topic.teaser.user = {
                 ...topic.teaser.user,
                 user_id: teaserUserData.user_id,
                 designation: teaserUserData.designation,
                 location: teaserUserData.location,
+                fullname: teaserUserData.fullname,
               };
             }
           }
@@ -292,6 +295,7 @@ plugin.init = async function (params) {
                 "user_id",
                 "designation",
                 "location",
+                "fullname",
               ]);
               console.log("userData", userData);
 
@@ -300,6 +304,7 @@ plugin.init = async function (params) {
                 user_id: userData.user_id,
                 designation: userData.designation,
                 location: userData.location,
+                fullname: userData.fullname,
               };
             }
 
@@ -307,13 +312,14 @@ plugin.init = async function (params) {
             if (topic.teaser && topic.teaser.uid) {
               const teaserUserData = await user.getUserFields(
                 topic.teaser.uid,
-                ["username", "user_id", "designation", "location"]
+                ["username", "user_id", "designation", "location", "fullname"]
               );
               topic.teaser.user = {
                 ...topic.teaser.user,
                 user_id: teaserUserData.user_id,
                 designation: teaserUserData.designation,
                 location: teaserUserData.location,
+                fullname: teaserUserData.fullname,
               };
             }
           }
@@ -334,12 +340,14 @@ plugin.init = async function (params) {
                   "user_id",
                   "designation",
                   "location",
+                  "fullname",
                 ]);
                 post.user = {
                   ...post.user,
                   user_id: postUserData.user_id,
                   designation: postUserData.designation,
                   location: postUserData.location,
+                  fullname: postUserData.fullname,
                 };
               }
             }
@@ -868,6 +876,10 @@ function anonymizeMentions(content) {
     )
     .replace(
       /<a[^>]*href="[^"]*\/uid\/\d+"[^>]*>@[^<]+<\/a>/g,
+      '<a href="/uid/0">anonymous</a>'
+    )
+    .replace(
+      /<a[^>]*href="[^"]*\/discussion-forum\/user\/[^"]+"[^>]*>[^<]+<\/a>/g,
       '<a href="/uid/0">anonymous</a>'
     )
     .replace(/<span[^>]*class="[^"]*avatar[^"]*"[^>]*>.*?<\/span>/g, "");
