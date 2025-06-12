@@ -262,6 +262,28 @@ plugin.init = async function (params) {
         "[Anonymous Posting] Original response data:",
         JSON.stringify(data, null, 2)
       );
+
+      // Check if this is the user topics route
+      if (
+        (req.route && req.route.path === "/api/user/:userslug/topics") ||
+        (req.route && req.route.path === "/api/user/:userslug/posts") ||
+        (req.route && req.route.path === "/api/user/:userslug/best")
+      ) {
+        const isAdmin = await user.isAdministrator(req.uid);
+        const requestedUserSlug = req.params.userslug;
+        const requestedUser = await user.getUidByUserslug(requestedUserSlug);
+        const isAuthor = requestedUser === req.uid;
+
+        if (!isAdmin && !isAuthor) {
+          // For non-admin and non-author users, remove anonymous data
+          if (Array.isArray(data)) {
+            data = data.filter((topic) => !topic.anonymous);
+          } else if (data && Array.isArray(data.topics)) {
+            data.topics = data.topics.filter((topic) => !topic.anonymous);
+          }
+        }
+      }
+
       let topicsArr = [];
       if (Array.isArray(data)) {
         topicsArr = data;
