@@ -274,12 +274,93 @@ plugin.init = async function (params) {
         const requestedUser = await user.getUidByUserslug(requestedUserSlug);
         const isAuthor = requestedUser === req.uid;
 
-        if (!isAdmin && !isAuthor) {
-          // For non-admin and non-author users, remove anonymous data
-          if (Array.isArray(data)) {
-            data = data.filter((topic) => !topic.anonymous);
-          } else if (data && Array.isArray(data.topics)) {
-            data.topics = data.topics.filter((topic) => !topic.anonymous);
+        // For non-admin and non-author users, remove anonymous data
+        if (Array.isArray(data.posts)) {
+          // For posts and best routes, we need to check both post and topic details
+          if (
+            req.route.path === "/api/user/:userslug/posts" ||
+            req.route.path === "/api/user/:userslug/best"
+          ) {
+            // Get all post IDs and topic IDs
+            const postIds = data.posts.map((post) => post.pid).filter(Boolean);
+            const topicIds = data.posts.map((post) => post.tid).filter(Boolean);
+
+            if (postIds.length && topicIds.length) {
+              // Get all posts and topics data in one batch
+              const [postsData, topicsData] = await Promise.all([
+                db.getObjects(postIds.map((pid) => `post:${pid}`)),
+                db.getObjects(topicIds.map((tid) => `topic:${tid}`)),
+              ]);
+
+              const postsMap = new Map(
+                postsData.map((post, index) => [postIds[index], post])
+              );
+              const topicsMap = new Map(
+                topicsData.map((topic, index) => [topicIds[index], topic])
+              );
+
+              // Filter out posts that are either anonymous themselves or belong to anonymous topics
+              data.posts = data.posts.filter((post) => {
+                const postData = postsMap.get(post.pid);
+                const topicData = topicsMap.get(post.tid);
+
+                // Check if post is anonymous in DB or belongs to anonymous topic
+                const isPostAnonymous =
+                  postData &&
+                  (postData.anonymous === true ||
+                    postData.anonymous === "true");
+                const isTopicAnonymous =
+                  topicData &&
+                  (topicData.anonymous === true ||
+                    topicData.anonymous === "true");
+
+                return !isPostAnonymous && !isTopicAnonymous;
+              });
+            }
+          } else {
+            data.posts = data.posts.filter((topic) => !topic.anonymous);
+          }
+        } else if (data && Array.isArray(data.posts)) {
+          // Handle object response with posts array
+          if (
+            req.route.path === "/api/user/:userslug/posts" ||
+            req.route.path === "/api/user/:userslug/best"
+          ) {
+            const postIds = data.posts.map((post) => post.pid).filter(Boolean);
+            const topicIds = data.posts.map((post) => post.tid).filter(Boolean);
+
+            if (postIds.length && topicIds.length) {
+              const [postsData, topicsData] = await Promise.all([
+                db.getObjects(postIds.map((pid) => `post:${pid}`)),
+                db.getObjects(topicIds.map((tid) => `topic:${tid}`)),
+              ]);
+
+              const postsMap = new Map(
+                postsData.map((post, index) => [postIds[index], post])
+              );
+              const topicsMap = new Map(
+                topicsData.map((topic, index) => [topicIds[index], topic])
+              );
+
+              data.posts = data.posts.filter((post) => {
+                const postData = postsMap.get(post.pid);
+                const topicData = topicsMap.get(post.tid);
+
+                // Check if post is anonymous in DB or belongs to anonymous topic
+                const isPostAnonymous =
+                  postData &&
+                  (postData.anonymous === true ||
+                    postData.anonymous === "true");
+                const isTopicAnonymous =
+                  topicData &&
+                  (topicData.anonymous === true ||
+                    topicData.anonymous === "true");
+
+                return !isPostAnonymous && !isTopicAnonymous;
+              });
+            }
+          } else {
+            data.posts = data.posts.filter((topic) => !topic.anonymous);
           }
         }
       }
