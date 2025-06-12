@@ -361,6 +361,7 @@ plugin.init = async function (params) {
             }
           } else {
             data.posts = data.posts.filter((topic) => !topic.anonymous);
+            data.topics = data.topics.filter((topic) => !topic.anonymous);
           }
         }
       }
